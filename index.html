@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coolify cPanel</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f4;color:#1c1c1a;min-height:100vh;display:flex}
+.sidebar{width:210px;min-height:100vh;background:#fff;border-right:1px solid #e5e5e3;padding:1.25rem 1rem;display:flex;flex-direction:column;gap:2px;position:fixed;top:0;left:0;height:100vh}
+.sidebar h1{font-size:14px;font-weight:600;padding:6px 8px 14px;border-bottom:1px solid #e5e5e3;margin-bottom:8px;color:#1c1c1a;display:flex;align-items:center;gap:8px}
+.logo{width:24px;height:24px;background:#1c1c1a;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700}
+.nav-item{padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:#6b6b68;display:flex;align-items:center;gap:8px;border:none;background:none;width:100%;text-align:left;transition:all 0.15s}
+.nav-item:hover{background:#f5f5f4;color:#1c1c1a}
+.nav-item.active{background:#f0f0ee;color:#1c1c1a;font-weight:500}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+.main{margin-left:210px;padding:2rem;flex:1;min-height:100vh}
+.page{display:none}.page.active{display:block}
+.page-title{font-size:20px;font-weight:600;margin-bottom:1.5rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:1.5rem}
+.metric-card{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:1rem}
+.metric-label{font-size:12px;color:#6b6b68;margin-bottom:6px}
+.metric-value{font-size:26px;font-weight:600}
+.sites-list{display:flex;flex-direction:column;gap:8px}
+.site-card{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:12px;transition:box-shadow 0.15s}
+.site-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.site-avatar{width:38px;height:38px;border-radius:8px;background:#f0f0ee;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#6b6b68;flex-shrink:0}
+.site-info{flex:1;min-width:0}
+.site-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.site-url{font-size:12px;color:#6b6b68;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;flex-shrink:0}
+.badge-running{background:#dcfce7;color:#166534}
+.badge-stopped{background:#fee2e2;color:#991b1b}
+.badge-other{background:#fef9c3;color:#854d0e}
+.site-actions{display:flex;gap:6px;flex-shrink:0}
+.btn{padding:6px 12px;border-radius:7px;border:1px solid #e5e5e3;background:#fff;cursor:pointer;font-size:12px;color:#1c1c1a;transition:all 0.15s;font-family:inherit}
+.btn:hover{background:#f5f5f4}
+.btn:active{transform:scale(0.97)}
+.btn-danger{color:#991b1b;border-color:#fecaca}
+.btn-danger:hover{background:#fee2e2}
+.btn-success{color:#166534;border-color:#bbf7d0}
+.btn-success:hover{background:#dcfce7}
+.btn-primary{background:#1c1c1a;color:#fff;border-color:transparent}
+.btn-primary:hover{background:#333}
+.btn-sm{padding:4px 8px;font-size:11px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.section-title{font-size:15px;font-weight:500}
+.log-box{background:#1c1c1a;border-radius:8px;padding:1rem;font-family:'SF Mono','Fira Code',monospace;font-size:12px;color:#a3a3a0;max-height:350px;overflow-y:auto;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+.form-group{margin-bottom:1rem}
+.form-label{font-size:13px;color:#6b6b68;margin-bottom:5px;display:block;font-weight:500}
+input,select,textarea{width:100%;padding:8px 12px;border:1px solid #e5e5e3;border-radius:7px;background:#fff;color:#1c1c1a;font-size:13px;font-family:inherit;transition:border-color 0.15s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#a3a3a0}
+textarea{min-height:100px;resize:vertical;font-family:'SF Mono','Fira Code',monospace}
+.toast{position:fixed;bottom:24px;right:24px;background:#1c1c1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity 0.25s;z-index:999;pointer-events:none}
+.toast.show{opacity:1}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #e5e5e3;border-top-color:#1c1c1a;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:3rem;color:#6b6b68;font-size:14px}
+.divider{height:1px;background:#e5e5e3;margin:1rem 0}
+.env-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.env-row input{flex:1}
+.detail-table{width:100%;border-collapse:collapse;font-size:13px}
+.detail-table td{padding:8px 0;border-bottom:1px solid #e5e5e3;vertical-align:top}
+.detail-table td:first-child{color:#6b6b68;width:140px}
+.card{background:#fff;border:1px solid #e5e5e3;border-radius:10px;padding:1.25rem;margin-bottom:1rem}
+.refresh-btn{font-size:12px;color:#6b6b68;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px}
+.refresh-btn:hover{color:#1c1c1a}
+.sidebar-section{font-size:10px;font-weight:600;color:#a3a3a0;text-transform:uppercase;letter-spacing:0.05em;padding:8px 10px 4px;margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h1><div class="logo">CP</div>Coolify Panel</h1>
+  <div class="sidebar-section">Genel</div>
+  <button class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">⊞</span>Dashboard</button>
+  <button class="nav-item" onclick="showPage('sites')"><span class="nav-icon">◈</span>Siteler</button>
+  <button class="nav-item" onclick="showPage('newsite')"><span class="nav-icon">+</span>Yeni Site</button>
+  <div class="sidebar-section">Yönetim</div>
+  <button class="nav-item" onclick="showPage('domains')"><span class="nav-icon">◎</span>Domainler</button>
+  <button class="nav-item" onclick="showPage('envs')"><span class="nav-icon">≡</span>Env Variables</button>
+  <button class="nav-item" onclick="showPage('logs')"><span class="nav-icon">≋</span>Loglar</button>
+  <div class="sidebar-section">Sistem</div>
+  <button class="nav-item" onclick="showPage('settings')"><span class="nav-icon">⚙</span>Ayarlar</button>
+</div>
+
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page active">
+    <div class="section-header">
+      <span class="page-title" style="margin:0">Dashboard</span>
+      <button class="refresh-btn" onclick="loadAll()">↻ Yenile</button>
+    </div>
+    <div class="cards-grid">
+      <div class="metric-card"><div class="metric-label">Toplam Servis</div><div class="metric-value" id="m-total"><span class="spinner"></span></div></div>
+      <div class="metric-card"><div class="metric-label">Çalışıyor</div><div class="metric-value" id="m-running" style="color:#166534"><span class="spinner"></span></div></div>
+      <div class="metric-card"><div class="metric-label">Durduruldu</div><div class="metric-value" id="m-stopped" style="color:#991b1b"><span class="spinner"></span></div></div>
+      <div class="metric-card"><div class="metric-label">Projeler</div><div class="metric-value" id="m-projects"><span class="spinner"></span></div></div>
+    </div>
+    <div class="section-header"><span class="section-title">Son Servisler</span><button class="btn btn-sm" onclick="showPage('sites')">Tümünü Gör</button></div>
+    <div id="dash-sites" class="sites-list"><div class="empty-state"><span class="spinner"></span> Yükleniyor...</div></div>
+  </div>
+
+  <!-- SİTELER -->
+  <div id="page-sites" class="page">
+    <div class="section-header">
+      <span class="page-title" style="margin:0">Tüm Siteler</span>
+      <div style="display:flex;gap:8px">
+        <button class="refresh-btn" onclick="loadAll()">↻ Yenile</button>
+        <button class="btn btn-primary" onclick="showPage('newsite')">+ Yeni Site</button>
+      </div>
+    </div>
+    <div id="all-sites" class="sites-list"><div class="empty-state"><span class="spinner"></span> Yükleniyor...</div></div>
+  </div>
+
+  <!-- YENİ SİTE -->
+  <div id="page-newsite" class="page">
+    <div class="page-title">Yeni Site Oluştur</div>
+    <div class="card" style="max-width:560px">
+      <div class="form-group"><label class="form-label">Site Adı *</label><input id="ns-name" type="text" placeholder="örn: my-website" /></div>
+      <div class="form-group"><label class="form-label">Proje *</label><select id="ns-project"><option>Yükleniyor...</option></select></div>
+      <div class="form-group"><label class="form-label">Sunucu *</label><select id="ns-server"><option>Yükleniyor...</option></select></div>
+      <div class="form-group"><label class="form-label">Docker Image</label><input id="ns-image" type="text" value="nginx:alpine" /></div>
+      <div class="form-group"><label class="form-label">Port</label><input id="ns-port" type="text" placeholder="80" /></div>
+      <div class="form-group"><label class="form-label">Domain (opsiyonel)</label><input id="ns-domain" type="text" placeholder="example.com" /></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="createSite()">Oluştur</button>
+        <button class="btn" onclick="showPage('sites')">İptal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAİNLER -->
+  <div id="page-domains" class="page">
+    <div class="section-header"><span class="page-title" style="margin:0">Domain Yönetimi</span><button class="refresh-btn" onclick="loadAll()">↻ Yenile</button></div>
+    <div id="domain-list" class="sites-list"><div class="empty-state"><span class="spinner"></span> Yükleniyor...</div></div>
+  </div>
+
+  <!-- ENV VARIABLES -->
+  <div id="page-envs" class="page">
+    <div class="page-title">Environment Variables</div>
+    <div class="form-group" style="max-width:400px"><label class="form-label">Servis Seç</label><select id="env-service-select" onchange="loadEnvs()"><option value="">-- Servis seçin --</option></select></div>
+    <div id="env-list"></div>
+    <div id="env-actions" style="display:none;max-width:560px">
+      <div class="divider"></div>
+      <div class="section-title" style="margin-bottom:12px">Yeni Değişken Ekle</div>
+      <div class="env-row"><input id="env-new-key" placeholder="KEY" /><input id="env-new-val" placeholder="VALUE" /><button class="btn btn-success" onclick="addEnv()">Ekle</button></div>
+      <button class="btn btn-primary" onclick="saveEnvs()">Tüm Değişkenleri Kaydet</button>
+    </div>
+  </div>
+
+  <!-- LOGLAR -->
+  <div id="page-logs" class="page">
+    <div class="page-title">Loglar</div>
+    <div class="form-group" style="max-width:400px"><label class="form-label">Servis Seç</label><select id="log-service-select" onchange="loadLogs()"><option value="">-- Servis seçin --</option></select></div>
+    <div id="log-output"></div>
+  </div>
+
+  <!-- AYARLAR -->
+  <div id="page-settings" class="page">
+    <div class="page-title">Ayarlar</div>
+    <div class="card" style="max-width:520px">
+      <div class="form-group"><label class="form-label">Coolify API URL</label><input id="set-url" type="text" /></div>
+      <div class="form-group"><label class="form-label">API Token</label><input id="set-token" type="text" /></div>
+      <button class="btn btn-primary" onclick="saveSettings()">Kaydet & Yenile</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CFG_KEY = 'cpanel_config';
+
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch(e) { return {}; }
+}
+function saveConfig(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
+
+function getSettings() {
+  const cfg = loadConfig();
+  return {
+    url: cfg.url || 'http://10.42.141.42:8000',
+    token: cfg.token || '3|oxu5pnL1h9HdvWKAyrS2ux7LEvmQfIFtAzIGo9wG7cad86fb'
+  };
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const s = getSettings();
+  document.getElementById('set-url').value = s.url;
+  document.getElementById('set-token').value = s.token;
+});
+
+function saveSettings() {
+  saveConfig({ url: document.getElementById('set-url').value, token: document.getElementById('set-token').value });
+  showToast('Ayarlar kaydedildi');
+  loadAll();
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const map = {dashboard:0,sites:1,newsite:2,domains:3,envs:4,logs:5,settings:6};
+  const items = document.querySelectorAll('.nav-item');
+  if(map[id] !== undefined) items[map[id]].classList.add('active');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+async function api(path, method='GET', body=null) {
+  const {url, token} = getSettings();
+  const opts = {
+    method,
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Accept': 'application/json' }
+  };
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(url + '/api/v1' + path, opts);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+let allApplications = [];
+let allProjects = [];
+let allServers = [];
+
+async function loadAll() {
+  try {
+    const [apps, projects, servers] = await Promise.all([
+      api('/applications').catch(()=>[]),
+      api('/projects').catch(()=>[]),
+      api('/servers').catch(()=>[])
+    ]);
+    allApplications = Array.isArray(apps) ? apps : [];
+    allProjects = Array.isArray(projects) ? projects : [];
+    allServers = Array.isArray(servers) ? servers : [];
+    renderDashboard();
+    renderSites();
+    renderDomains();
+    populateSelects();
+  } catch(e) {
+    document.getElementById('dash-sites').innerHTML = '<div class="empty-state">Bağlantı hatası: ' + e.message + '<br><small>Ayarlar\'dan API URL ve token\'ı kontrol edin</small></div>';
+  }
+}
+
+function statusBadge(s) {
+  const st = (s||'').toLowerCase();
+  if(st==='running') return '<span class="badge badge-running">Çalışıyor</span>';
+  if(st==='stopped'||st==='exited') return '<span class="badge badge-stopped">Durduruldu</span>';
+  return '<span class="badge badge-other">' + (s||'Bilinmiyor') + '</span>';
+}
+
+function siteCardHTML(app) {
+  const id = app.uuid || app.id;
+  const name = app.name || 'İsimsiz';
+  const status = app.status || 'unknown';
+  const fqdn = app.fqdn || (app.domains && app.domains[0]) || '';
+  const isRunning = (status||'').toLowerCase() === 'running';
+  return `<div class="site-card" id="sc-${id}">
+    <div class="site-avatar">${name[0].toUpperCase()}</div>
+    <div class="site-info">
+      <div class="site-name">${name}</div>
+      <div class="site-url">${fqdn || app.image || app.docker_image || ''}</div>
+    </div>
+    ${statusBadge(status)}
+    <div class="site-actions">
+      ${isRunning
+        ? `<button class="btn btn-sm btn-danger" onclick="stopApp('${id}')">⏹ Durdur</button>`
+        : `<button class="btn btn-sm btn-success" onclick="startApp('${id}')">▶ Başlat</button>`}
+      <button class="btn btn-sm" onclick="restartApp('${id}')">↻</button>
+      <button class="btn btn-sm" onclick="openLogs('${id}')">Loglar</button>
+      <button class="btn btn-sm" onclick="openEnvs('${id}')">Env</button>
+    </div>
+  </div>`;
+}
+
+function renderDashboard() {
+  const running = allApplications.filter(a => (a.status||'').toLowerCase()==='running').length;
+  document.getElementById('m-total').textContent = allApplications.length;
+  document.getElementById('m-running').textContent = running;
+  document.getElementById('m-stopped').textContent = allApplications.length - running;
+  document.getElementById('m-projects').textContent = allProjects.length;
+  const last = allApplications.slice(0,6);
+  document.getElementById('dash-sites').innerHTML = last.length ? last.map(siteCardHTML).join('') : '<div class="empty-state">Henüz servis yok</div>';
+}
+
+function renderSites() {
+  document.getElementById('all-sites').innerHTML = allApplications.length ? allApplications.map(siteCardHTML).join('') : '<div class="empty-state">Henüz servis yok</div>';
+}
+
+function renderDomains() {
+  const withDomain = allApplications.filter(a => a.fqdn || (a.domains && a.domains.length));
+  document.getElementById('domain-list').innerHTML = withDomain.length ? withDomain.map(a => `
+    <div class="site-card">
+      <div class="site-avatar">${(a.name||'?')[0].toUpperCase()}</div>
+      <div class="site-info"><div class="site-name">${a.name}</div><div class="site-url">${a.fqdn||(a.domains&&a.domains[0])||''}</div></div>
+      ${statusBadge(a.status)}
+    </div>`).join('') : '<div class="empty-state">Domain tanımlı servis bulunamadı</div>';
+}
+
+function populateSelects() {
+  const pSel = document.getElementById('ns-project');
+  pSel.innerHTML = allProjects.length ? allProjects.map(p=>`<option value="${p.uuid||p.id}">${p.name}</option>`).join('') : '<option value="">Proje bulunamadı</option>';
+  const sSel = document.getElementById('ns-server');
+  sSel.innerHTML = allServers.length ? allServers.map(s=>`<option value="${s.uuid||s.id}">${s.name||s.ip}</option>`).join('') : '<option value="">Sunucu bulunamadı</option>';
+  const envSel = document.getElementById('env-service-select');
+  const logSel = document.getElementById('log-service-select');
+  const base = '<option value="">-- Servis seçin --</option>';
+  const appOpts = allApplications.map(a=>`<option value="${a.uuid||a.id}">${a.name}</option>`).join('');
+  envSel.innerHTML = base + appOpts;
+  logSel.innerHTML = base + appOpts;
+}
+
+async function startApp(id) {
+  try { await api('/applications/'+id+'/start','POST'); showToast('Başlatılıyor...'); setTimeout(loadAll, 2500); }
+  catch(e) { showToast('Hata: '+e.message); }
+}
+
+async function stopApp(id) {
+  try { await api('/applications/'+id+'/stop','POST'); showToast('Durduruluyor...'); setTimeout(loadAll, 2500); }
+  catch(e) { showToast('Hata: '+e.message); }
+}
+
+async function restartApp(id) {
+  try { await api('/applications/'+id+'/restart','POST'); showToast('Yeniden başlatılıyor...'); setTimeout(loadAll, 3000); }
+  catch(e) { showToast('Hata: '+e.message); }
+}
+
+function openLogs(id) {
+  showPage('logs');
+  document.getElementById('log-service-select').value = id;
+  loadLogs();
+}
+
+function openEnvs(id) {
+  showPage('envs');
+  document.getElementById('env-service-select').value = id;
+  loadEnvs();
+}
+
+async function loadLogs() {
+  const id = document.getElementById('log-service-select').value;
+  if(!id) return;
+  const box = document.getElementById('log-output');
+  box.innerHTML = '<div class="log-box"><span class="spinner" style="border-color:#444;border-top-color:#fff"></span> Loglar yükleniyor...</div>';
+  try {
+    const data = await api('/applications/'+id+'/logs').catch(()=>null);
+    const lines = data && (data.logs || data);
+    box.innerHTML = '<div class="log-box">' + (typeof lines === 'string' ? lines.replace(/</g,'&lt;').replace(/>/g,'&gt;') : JSON.stringify(lines, null, 2)) + '</div>';
+  } catch(e) {
+    box.innerHTML = '<div class="log-box">Log alınamadı: ' + e.message + '</div>';
+  }
+}
+
+let currentEnvs = [];
+
+async function loadEnvs() {
+  const id = document.getElementById('env-service-select').value;
+  if(!id) { document.getElementById('env-list').innerHTML=''; document.getElementById('env-actions').style.display='none'; return; }
+  document.getElementById('env-actions').style.display='block';
+  try {
+    const data = await api('/applications/'+id+'/envs').catch(()=>[]);
+    currentEnvs = Array.isArray(data) ? data : [];
+    renderEnvs();
+  } catch(e) { showToast('Env yüklenemedi'); }
+}
+
+function renderEnvs() {
+  document.getElementById('env-list').innerHTML = currentEnvs.length
+    ? '<div style="max-width:560px">' + currentEnvs.map((e,i)=>`
+      <div class="env-row">
+        <input value="${e.key||''}" onchange="currentEnvs[${i}].key=this.value" placeholder="KEY"/>
+        <input value="${e.value||''}" onchange="currentEnvs[${i}].value=this.value" placeholder="VALUE"/>
+        <button class="btn btn-sm btn-danger" onclick="currentEnvs.splice(${i},1);renderEnvs()">Sil</button>
+      </div>`).join('') + '</div>'
+    : '<p style="font-size:13px;color:#6b6b68;margin-bottom:1rem">Henüz değişken yok</p>';
+}
+
+function addEnv() {
+  const k = document.getElementById('env-new-key').value.trim();
+  const v = document.getElementById('env-new-val').value.trim();
+  if(!k) return showToast('KEY boş olamaz');
+  currentEnvs.push({key:k, value:v});
+  document.getElementById('env-new-key').value = '';
+  document.getElementById('env-new-val').value = '';
+  renderEnvs();
+}
+
+async function saveEnvs() {
+  const id = document.getElementById('env-service-select').value;
+  if(!id) return;
+  try {
+    await api('/applications/'+id+'/envs','PUT',{data:currentEnvs});
+    showToast('Env değişkenleri kaydedildi');
+  } catch(e) { showToast('Kaydetme hatası: '+e.message); }
+}
+
+async function createSite() {
+  const name = document.getElementById('ns-name').value.trim();
+  if(!name) return showToast('Site adı gerekli');
+  const payload = {
+    name,
+    docker_image: document.getElementById('ns-image').value.trim() || 'nginx:alpine',
+    ports_exposes: document.getElementById('ns-port').value.trim() || '80',
+    project_uuid: document.getElementById('ns-project').value,
+    server_uuid: document.getElementById('ns-server').value
+  };
+  const domain = document.getElementById('ns-domain').value.trim();
+  if(domain) payload.fqdn = domain;
+  try {
+    await api('/applications/dockerimage','POST',payload);
+    showToast('Site oluşturuldu!');
+    document.getElementById('ns-name').value = '';
+    document.getElementById('ns-domain').value = '';
+    setTimeout(()=>{ loadAll(); showPage('sites'); }, 1500);
+  } catch(e) { showToast('Oluşturma hatası: '+e.message); }
+}
+
+loadAll();
+</script>
+</body>
+</html>
