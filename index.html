@@ -405,21 +405,27 @@ async function saveEnvs() {
 async function createSite() {
   const name = document.getElementById('ns-name').value.trim();
   if(!name) return showToast('Site adı gerekli');
+  const image = document.getElementById('ns-image').value.trim() || 'nginx:alpine';
+  const [imgName, imgTag] = image.includes(':') ? image.split(':') : [image, 'latest'];
   const payload = {
     name,
-    docker_image: document.getElementById('ns-image').value.trim() || 'nginx:alpine',
+    docker_registry_image_name: imgName,
+    docker_registry_image_tag: imgTag,
     ports_exposes: document.getElementById('ns-port').value.trim() || '80',
     project_uuid: document.getElementById('ns-project').value,
-    server_uuid: document.getElementById('ns-server').value
+    server_uuid: document.getElementById('ns-server').value,
+    destination_uuid: 'fn7j1czt09ew5y3f9pqceyey',
+    environment_name: 'production',
+    instant_deploy: true
   };
   const domain = document.getElementById('ns-domain').value.trim();
   if(domain) payload.fqdn = domain;
   try {
-    await api('/applications/dockerimage','POST',payload);
-    showToast('Site oluşturuldu!');
+    const res = await api('/applications/dockerimage','POST',payload);
+    showToast('Site oluşturuldu! URL: ' + (res.domains||''));
     document.getElementById('ns-name').value = '';
     document.getElementById('ns-domain').value = '';
-    setTimeout(()=>{ loadAll(); showPage('sites'); }, 1500);
+    setTimeout(()=>{ loadAll(); showPage('sites'); }, 2000);
   } catch(e) { showToast('Oluşturma hatası: '+e.message); }
 }
 
