@@ -418,10 +418,13 @@ async function createSite() {
     environment_name: 'production',
     instant_deploy: true
   };
-  const domain = document.getElementById('ns-domain').value.trim();
-  if(domain) payload.fqdn = domain;
   try {
     const res = await api('/applications/dockerimage','POST',payload);
+    const appUuid = res.uuid;
+    const domain = document.getElementById('ns-domain').value.trim();
+    if(domain && appUuid) {
+      await api('/applications/'+appUuid,'PATCH',{fqdn: domain}).catch(()=>{});
+    }
     showToast('Site oluşturuldu! URL: ' + (res.domains||''));
     document.getElementById('ns-name').value = '';
     document.getElementById('ns-domain').value = '';
